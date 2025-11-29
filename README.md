@@ -6,6 +6,8 @@ Stage 3: The referee announces the winner and a buzzer makes a sound
 (Repeat stages 2 and 3 for 5 games)
 Stage 4: Whoever won the best of 5 will be announced on the lcd screen and an rgb led will put on a show and the buzzer will go off
 
+Note: 0=nothings played, 1=rock, 2=paper, 3=scissors
+
 Use the SoftwareSerial library to connect all our arduinos together. Example of how to use it: 
 #include <SoftwareSerial.h>
 

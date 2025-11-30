@@ -12,6 +12,7 @@ const int pMeter = A0, buzzer = 8;
 String choice = "none\n";
 const String stage = "?";
 bool win = false;
+int winCycle = 0; //It stops the rgb and buzzer after a certain number
 
 void setup() {
   pinMode(rockLED,     OUTPUT);
@@ -82,55 +83,33 @@ void loop() {
     digitalWrite(rockLED, LOW);
     digitalWrite(paperLED, LOW);
     digitalWrite(scissorsLED, LOW);
-
-    /*if (win){
-      tone(buzzer, 1000);
-
-      analogWrite(RLED, random(255));
-      analogWrite(GLED, random(255));
-      analogWrite(BLED, random(255));
-    }*/
   }
 
-  if (newMill - oldMill > 500){
+  if (newMill - oldMill > 100){
     oldMill = newMill;
     if (win){
-      int a = analogRead(pMeter);
-      Serial.println(a);
-      if (a<1000){
-        tone(buzzer, 0);
-      } else{
-        tone(buzzer , 500);
-      }
+      winCycle++;
 
       analogWrite(RLED, random(255));
       analogWrite(GLED, random(255));
       analogWrite(BLED, random(255));
+
+      int a = analogRead(pMeter);
+      //Serial.println(a);
+      if (a > 50)
+        tone(buzzer, a);
+      else
+        noTone(buzzer);
+
+      if (winCycle >= 20){
+        win = false;
+        noTone(buzzer);
+        winCycle = 0;
+        analogWrite(RLED, 0);
+        analogWrite(GLED, 0);
+        analogWrite(BLED, 0);
+      }
     }
   }
-  /*
-  digitalWrite(rockLED, HIGH);
-  digitalWrite(paperLED, HIGH);
-  digitalWrite(scissorsLED, HIGH);
-
-  analogWrite(RLED, 215);
-  analogWrite(GLED, 105);
-  analogWrite(BLED, 55);
-
-  //tone(buzzer, 1000);
-
-  Serial.print("\n\n\n\n\n\npMeter:");
-  Serial.println(analogRead(pMeter));
-
-  Serial.print("rockButton:");
-  Serial.println(digitalRead(rockButton));
-
-  Serial.print("paperButton:");
-  Serial.println(digitalRead(paperButton));
-
-  Serial.print("scissorsButton:");
-  Serial.println(digitalRead(scissorsButton));
-
-  delay(1000);
-  */
 }
+

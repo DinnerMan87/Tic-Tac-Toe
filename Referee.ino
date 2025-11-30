@@ -20,7 +20,7 @@ int photoPin = A0;
 
 String stage = "stage0"; //data sent from Referee of stage the game is on
 String numOfRounds = "round0"; //data sent from Referee of rounds played so far
-String prevMoves; //data sent from Referee of previous moves player made
+String prevMoves = ""; //data sent from Referee of previous moves player made
                    //0=no moves played, r=rock. p=paper, s=scissors
 String winner = "noWinner"; //data sent from Referee of who the winner is
 
@@ -34,6 +34,7 @@ char* cString;
 
 void setup() {
   // put your setup code here, to run once:
+  prevMoves = "";
   Serial.begin(9600); //player port
   compSerial.begin(9600); //computer port
   pinMode(rxPin, INPUT);
@@ -73,16 +74,41 @@ void loop() {
 
   } else if (stage == "stage2") {
     
-    if(Serial.available() > 0) {
-      
+    if(Serial.availableForWrite()){ //write to player
+      if (playerSelection == "?" && computerSelection == "?") {
+        stage = "stage2";
+      } else {
+        stage = "stage3";
+      }
+      convert(stage);
+      Serial.write(cString);
     }
-    if(compSerial.available() > 0){
-
+    if(compSerial.availableForWrite()){ //write to computer
+      if (playerSelection == "?" && computerSelection == "?") {
+        stage = "stage2";
+      } else {
+        stage = "stage3";
+      }
+      convert(stage);
+      compSerial.write(cString);
+      convert(prevMoves);
+      compSerial.write(cString);
+    }
+    if(Serial.available() > 0) { //read from player
+      playerSelection = Serial.readStringUntil('\n');
+      prev(playerSelection);
+    }
+    if(compSerial.available() > 0){ //read from computer
+      computerSelection = Serial.readStringUntil('\n');
     }
 
   } else if (stage == "stage3") {
     
+
+
   } else if (stage == "stage4") {
+    
+
     
   }
 }
@@ -91,4 +117,8 @@ void convert(String s) { //convert a C++ string to a cString to be sent Serially
   free(cString);
   cString = (char*) malloc(sizeof(char)*(s.length()+1));
   s.toCharArray(cString, s.length()+1);
+}
+
+void prev(String s) {
+  prevMoves += s[0];
 }

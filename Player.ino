@@ -75,7 +75,7 @@ void loop() {
       stage = "3";
       //Serial.print("Stage 3: sending player choice - ");
       //MASTER.write(choice.c_str());
-        win = false;
+        if (!win){
         noTone(buzzer);
         winCycle = 0;
         analogWrite(RLED, 0);
@@ -83,8 +83,7 @@ void loop() {
         analogWrite(BLED, 0);
         digitalWrite(rockLED, LOW);
         digitalWrite(paperLED, LOW);
-        digitalWrite(scissorsLED, LOW);
-      
+        digitalWrite(scissorsLED, LOW);}
     
     } else if (read == "win"){
       win = true;

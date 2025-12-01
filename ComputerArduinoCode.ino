@@ -15,10 +15,18 @@
   interconnected embedded systems can work together to perform a unified task efficiently and reliably.
 */
 
-#include <Servo.h>
-
+#include <SoftwareSerial.h>
 //Computer Arduino Code
 //11-29-2025 at 6:02 PM couldn't get servo motor to work
+#define rxPin 0
+#define txPin 1
+
+SoftwareSerial mySerial = SoftwareSerial(rxPin,txPin);
+
+//fan portion
+unsigned int fanSpeed = 170;
+const unsigned long fanPeriod = 1000;
+//end of fan portion
 
 unsigned long previousMillis = 0;
 unsigned long previousMillis2 = 0;
@@ -52,15 +60,12 @@ const int redPin = 12; //pin for red on the RBG LED
 const int greenPin = 11; //pin for green on the RGB LED
 const int bluePin = 8; //pin for blue on the RBG LED
 
-Servo servo1; //set up instance of Servo motor
-int servoPin = 13; //pin for Servo motor
-
 //String gameSelection = ""; //data sent from Referee of whether its two player or player vs computer
                        //0=nothing selected, 1=two players, 2=player vs think
 String stage = "stage0"; //data sent from Referee of stage the game is on
 String numOfRounds = "round0"; //data sent from Referee of rounds played so far
 String prevMoves; //data sent from Referee of previous moves player made
-                   //0=no moves played, r=rock. p=paper, s=scissors
+                   //0=no moves played, r=rock. p=paper, s=scissors mark end of string with \n
 String winner = "noWinner"; //data sent from Referee of who the winner is
                 //0=no winner, 1=playerOne, 2=playerTwo, 3=computer
 
@@ -71,7 +76,10 @@ String computerSelection = "?"; //data sent to Referee of the choice computer ma
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  pinMode(rxPin, INPUT);
+  pinMode(txPin, OUTPUT);
+  mySerial.begin(9600);
+
   pinMode(buzzerPin, OUTPUT);
   pinMode(buttonPinRandom, INPUT);
   pinMode(buttonPinThink, INPUT);
@@ -81,41 +89,52 @@ void setup() {
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
-  servo1.attach(servoPin);
+  //fan portion of code
+  pinMode(13, OUTPUT); //enable
+  pinMode(10, OUTPUT); 
+  pinMode(9, OUTPUT);
+  //end of fan portion
+  stage = "stage0";
+  numOfRounds = "round0";
+  winner = "noWinner";
+  computerMode = 0;
+  computerSelection = "?"; 
   randomSeed(analogRead(0));
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   hz = analogRead(potentPin);
+  mySerial.println(stage);
   //tests for hardware
   //tone(buzzerPin, hz);
   //digitalWrite(ledR, HIGH);
   //digitalWrite(ledP, HIGH);
   //digitalWrite(ledS, HIGH);
-  //int readingR = digitalRead(buttonPinRandom);
-  //Serial.println(readingR);
-  //int readingT = digitalRead(buttonPinThink);
-  //Serial.println(readingT);
   //analogWrite(redPin, 180);
   //analogWrite(greenPin, 0);
   //analogWrite(bluePin , 0);
-  //servo1.write(0);
-  //delay(1000);
-  //servo1.write(90);
-  //delay(1000);
-  //servo1.write(180);
-  //delay(1000);
+  //analogWrite(13, fanSpeed);
+  //digitalWrite(9, HIGH);
+  //digitalWrite(10, LOW);
   //lightshow();
   if (stage == "stage0") {
     noTone(buzzerPin);
-    if (Serial.available() > 0) {
-      stage = Serial.readStringUntil('\n');
+    if (mySerial.available() > 0) {
+      String read = mySerial.readStringUntil('\n');
+      if(read == "stage1"){
+        stage = "stage1";
+      }
+      mySerial.print(read);
     }
   } else if (stage == "stage1") {
-    if (Serial.available() > 0) {
-      stage = Serial.readStringUntil('\n');
-    }
+    /*if (mySerial.available() > 0) {
+      String read = mySerial.readStringUntil('\n');
+      if(read == "stage1"){
+        stage = "stage1";
+      }
+      mySerial.print("stage received " + stage);
+    }*/
     int readingThink = digitalRead(buttonPinThink);
     if (readingThink != lastButtonStateThink){
       lastDebounceTimeThink = millis();
@@ -131,7 +150,7 @@ void loop() {
         buttonStateThink = readingThink;
         if(buttonStateThink == HIGH) {
           computerMode = 2; //computerMode is thinking
-          Serial.write("nextStage\n");
+          mySerial.write("nextStage\n");
         }
       }
     }
@@ -142,15 +161,22 @@ void loop() {
         buttonStateRandom = readingRandom;
         if(buttonStateRandom == HIGH) {
           computerMode = 1; //computerMode is random
-          Serial.write("nextStage\n");
+          mySerial.write("nextStage\n");
         }
       }
     }
     lastButtonStateRandom = readingRandom;
   } else if (stage == "stage2") {
-    if (Serial.available() > 0) {
-      stage = Serial.readStringUntil('\n');
-      prevMoves = Serial.readStringUntil('\n');
+    if (mySerial.available() > 0) {
+      String read = mySerial.readStringUntil('\n');
+      if(read == "stage3"){
+        stage = "stage3";
+        mySerial.print("stage received " + stage);
+      } else if (read == "stage2") {
+      } else {
+        prevMoves = read;
+        mySerial.print("prevMoves received " + prevMoves);
+      }
     }
     if(computerMode == 1 || prevFunc()) { //randomly chosen
 
@@ -162,7 +188,7 @@ void loop() {
         tone(buzzerPin, hz);
         char* cString = (char*) malloc(sizeof(char)*(computerSelection.length()+1));
         computerSelection.toCharArray(cString, computerSelection.length()+1);
-        Serial.write(cString);
+        mySerial.write(cString);
         digitalWrite(ledR, ledStateR);
         digitalWrite(ledP, ledStateP);
         digitalWrite(ledS, ledStateS);
@@ -193,7 +219,7 @@ void loop() {
         tone(buzzerPin, hz);
         char* cString = (char*) malloc(sizeof(char)*(computerSelection.length()+1));
         computerSelection.toCharArray(cString, computerSelection.length()+1);
-        Serial.write(cString);
+        mySerial.write(cString);
         digitalWrite(ledR, ledStateR);
         digitalWrite(ledP, ledStateP);
         digitalWrite(ledS, ledStateS);
@@ -202,22 +228,37 @@ void loop() {
     }
   } else if (stage == "stage3") {
     noTone(buzzerPin);
-    if (Serial.available() > 0) {
-      stage = Serial.readStringUntil('\n');
-      winner = Serial.readStringUntil('\n');
+    if (mySerial.available() > 0) {
+      String read = mySerial.readStringUntil('\n');
+      if(read == "stage2"){
+        stage = "stage2";
+        mySerial.print("stage received " + stage);
+      } else if (read == "stage4") {
+        stage = "stage4";
+        mySerial.print("stage received " + stage);
+      } else if (read == "Computer") {
+        winner = "Computer";
+        mySerial.print("winner received " + winner);
+      } 
     }
-    if (winner == "win") {
+    if (winner == "Computer") {
       lightshow();
     }
   } else if (stage == "stage4") {
     digitalWrite(ledR, LOW);
     digitalWrite(ledP, LOW);
     digitalWrite(ledS, LOW);
-    if (Serial.available() > 0) {
-      stage = Serial.readStringUntil('\n');
-      winner = Serial.readStringUntil('\n');
+    if (mySerial.available() > 0) {
+      String read = mySerial.readStringUntil('\n');
+      if(read == "stage0") {
+        stage = "stage0";
+        mySerial.print("stage received " + stage);
+      } else if (read = "Computer") {
+        winner = "Computer";
+        mySerial.print("winner received " + winner);                                                    
+      }
     }
-    if (winner = "win") {
+    if (winner = "Computer") {
       lightshow();
       tone(buzzerPin, hz);
     }

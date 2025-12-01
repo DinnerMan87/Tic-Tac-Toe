@@ -1,3 +1,19 @@
+/*
+  CS342 - Troy
+  Final Project
+  Group 64 - Rock, Paper, Scissors
+  Anthony Youssef - ayous11
+  Daniel Loera - dloer2
+  Ryan Vincoy - rvinc
+  June Hong - hhong43
+  Abstract: The goal of this project is to create a Rock-Paper-Scissors game hosted on four 
+  Arduinos that leverages a main system and multiple side systems to handle distributed gameplay. 
+  The side Arduinos are responsible for capturing player inputs and transmitting them to the main Arduino, 
+  which manages game logic, determines winners and losers, and communicates results back to each side system. 
+  This design demonstrates effective serial communication and coordination between multiple microcontrollers, 
+  emphasizing modular design, synchronization, and real-time data exchange. The project highlights how 
+  interconnected embedded systems can work together to perform a unified task efficiently and reliably.
+*/
 
 #include <LiquidCrystal.h>
 #include <SoftwareSerial.h>

@@ -2,9 +2,7 @@
 #include <LiquidCrystal.h>
 #include <SoftwareSerial.h>
 
-// =============================
-//   REFEREE ARDUINO
-// =============================
+// REFEREE ARDUINO
 
 // SoftwareSerial to COMPUTER Arduino
 #define rxPin 4
@@ -50,9 +48,7 @@ void setup() {
 
 void loop() {
 
-  // =====================================================
-  //  STAGE 0 — WAIT FOR START BUTTON
-  // =====================================================
+  // STAGE 0 — WAIT FOR START BUTTON
   if (stage == "stage0") {
 
     lcd.setCursor(0, 0);
@@ -83,9 +79,7 @@ void loop() {
 
 
 
-  // =====================================================
-  //  STAGE 1 — COMPUTER SELECTS MODE
-  // =====================================================
+  // STAGE 1 — COMPUTER SELECTS MODE
   else if (stage == "stage1") {
 
     if (compSerial.available()) {

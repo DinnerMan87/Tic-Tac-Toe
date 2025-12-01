@@ -94,12 +94,6 @@ void loop() {
       digitalWrite(rockLED, LOW);
       digitalWrite(paperLED, LOW);
     } 
-
-
-  } else if (stage == "3"){
-    digitalWrite(rockLED, LOW);
-    digitalWrite(paperLED, LOW);
-    digitalWrite(scissorsLED, LOW);
   }
 
   if (newMill - oldMill > 100){
@@ -125,6 +119,9 @@ void loop() {
         analogWrite(RLED, 0);
         analogWrite(GLED, 0);
         analogWrite(BLED, 0);
+        digitalWrite(rockLED, LOW);
+        digitalWrite(paperLED, LOW);
+        digitalWrite(scissorsLED, LOW);
       }
     }
   }

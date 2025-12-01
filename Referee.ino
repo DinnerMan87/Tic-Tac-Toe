@@ -2,7 +2,9 @@
 #include <LiquidCrystal.h>
 #include <SoftwareSerial.h>
 
-// REFEREE ARDUINO
+// =============================
+//   REFEREE ARDUINO
+// =============================
 
 // SoftwareSerial to COMPUTER Arduino
 #define rxPin 4
@@ -18,35 +20,39 @@ const int startButtonPin = 13;
 int buttonState;
 int lastButtonState = LOW;
 unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 50;
+const unsigned long debounceDelay = 50;
 
-// Game State Variables
+// Game state variables
 String stage = "stage0";
-String prevMoves = "00000";   // first 5 moves
+String prevMoves = "00000";
 String winner = "noWinner";
 
 String playerSelection = "?";
 String computerSelection = "?";
 
-char* cString;
+// Non-blocking timers
+unsigned long stageTimer = 0;
+unsigned long stageTimeout = 0;
 
-// SETUP
+
+
 void setup() {
-  Serial.begin(9600);      // Player Arduino port
-  compSerial.begin(9600);  // Computer Arduino port
+  Serial.begin(9600);      // Player Arduino
+  compSerial.begin(9600);  // Computer Arduino
 
-  pinMode(rxPin, INPUT);
-  pinMode(txPin, OUTPUT);
   pinMode(startButtonPin, INPUT);
 
   lcd.begin(16, 2);
   lcd.print("Referee Ready");
 }
 
-// MAIN LOOP
+
+
 void loop() {
 
-  // STAGE 0 — WAIT FOR START BUTTON
+  // =====================================================
+  //  STAGE 0 — WAIT FOR START BUTTON
+  // =====================================================
   if (stage == "stage0") {
 
     lcd.setCursor(0, 0);
@@ -54,22 +60,20 @@ void loop() {
 
     int reading = digitalRead(startButtonPin);
 
-    if (reading != lastButtonState) {
-      lastDebounceTime = millis();
-    }
+    if (reading != lastButtonState) lastDebounceTime = millis();
 
     if ((millis() - lastDebounceTime) > debounceDelay) {
       if (reading != buttonState) {
         buttonState = reading;
 
         if (buttonState == HIGH) {
-
           stage = "stage1";
           lcd.clear();
           lcd.print("Stage1: Mode Sel");
 
-          // send stage1 to both Arduinos
-          sendToBoth("stage1\n");
+          // Tell both Arduinos
+          Serial.print("stage1\n");     // to PLAYER
+          compSerial.print("stage1\n"); // to COMPUTER
         }
       }
     }
@@ -77,7 +81,11 @@ void loop() {
     lastButtonState = reading;
   }
 
-  // STAGE 1 — COMPUTER SELECTS MODE
+
+
+  // =====================================================
+  //  STAGE 1 — COMPUTER SELECTS MODE
+  // =====================================================
   else if (stage == "stage1") {
 
     if (compSerial.available()) {
@@ -85,40 +93,42 @@ void loop() {
       msg.trim();
 
       if (msg == "nextStage") {
-        stage = "stage2";
 
+        stage = "stage2";
         lcd.clear();
         lcd.print("Stage2: Moves");
 
-        // Send stage2 + prevMoves to computer
-        sendToComputer("stage2\n");
-        sendToComputer(prevMoves + "\n");
+        // Send stage2 and previous move memory to the computer
+        compSerial.print("stage2\n");
+        compSerial.print(prevMoves + "\n");
 
-        // Send "start" to player
-        sendToPlayer("start\n");
+        // Tell player to begin input
+        Serial.print("start\n");
       }
     }
   }
 
-  // STAGE 2 — WAIT FOR MOVES
+
+
+  // =====================================================
+  //  STAGE 2 — WAIT FOR PLAYER + COMPUTER MOVES
+  // =====================================================
   else if (stage == "stage2") {
 
+    // PLAYER MOVE
     if (Serial.available()) {
-
       String msg = Serial.readStringUntil('\n');
       msg.trim();
 
-      // expect format "1:rock"
-      int colonPos = msg.indexOf(':');
-      if (colonPos > 0) {
-        playerSelection = msg.substring(colonPos + 1);
+      if (msg == "rock" || msg == "paper" || msg == "scissors") {
+        playerSelection = msg;
         lcd.setCursor(0, 1);
         lcd.print("P:" + playerSelection + "   ");
       }
     }
 
+    // COMPUTER MOVE
     if (compSerial.available()) {
-
       String msg = compSerial.readStringUntil('\n');
       msg.trim();
 
@@ -129,80 +139,73 @@ void loop() {
       }
     }
 
+    // Once both moves are received → go to stage3
     if (playerSelection != "?" && computerSelection != "?") {
 
       winner = evaluateWinner();
-
       updatePrevMoves(playerSelection);
 
       stage = "stage3";
-
+      stageTimer = millis();  // start timer
       lcd.clear();
       lcd.print("Winner: ");
       lcd.print(winner);
 
-      // send results to computer
-      sendToComputer("stage3\n");
-      sendToComputer(winner + "\n");
+      // Tell computer Arduino who won
+      compSerial.print("stage3\n");
+      compSerial.print(winner + "\n");
 
-      // stop player
-      sendToPlayer("stop\n");
+      // Tell player Arduino to stop reading buttons
+      Serial.print("stop\n");
     }
   }
 
-  // STAGE 3 — SHOW RESULTS
+
+
+  // =====================================================
+  //  STAGE 3 — DISPLAY WINNER (NON-BLOCKING)
+  // =====================================================
   else if (stage == "stage3") {
 
-    delay(3000);
+    if (millis() - stageTimer >= 2500) { // 2.5 seconds
+      stage = "stage4";
 
-    // goto stage4 to reset
-    stage = "stage4";
+      lcd.clear();
+      lcd.print("Resetting...");
 
-    lcd.clear();
-    lcd.print("Stage4: Reset");
-
-    sendToComputer("stage4\n");
+      compSerial.print("stage4\n");
+      stageTimer = millis();
+    }
   }
 
-  // STAGE 4 — RESET SYSTEM
+
+
+  // =====================================================
+  //  STAGE 4 — RESET GAME (NON-BLOCKING)
+  // =====================================================
   else if (stage == "stage4") {
 
-    delay(2000);
+    if (millis() - stageTimer >= 1500) { // 1.5 seconds
 
-    // reset everything
-    playerSelection = "?";
-    computerSelection = "?";
-    winner = "noWinner";
+      // Reset variables
+      playerSelection = "?";
+      computerSelection = "?";
+      winner = "noWinner";
 
-    lcd.clear();
-    lcd.print("Ready Next Game");
+      lcd.clear();
+      lcd.print("Press Start Btn");
 
-    stage = "stage0";
+      stage = "stage0";
+    }
   }
 }
 
-// SEND HELPERS
-void sendToPlayer(String s) {
-  Serial.print(s);
-}
 
-void sendToComputer(String s) {
-  compSerial.print(s);
-}
 
-void sendToBoth(String s) {
-  Serial.print(s);
-  compSerial.print(s);
-}
+// =====================================================
+//  HELPER FUNCTIONS
+// =====================================================
 
-// C STRING CONVERTER
-void convert(String s) {
-  if (cString != NULL) free(cString);
-  cString = (char*)malloc(s.length() + 1);
-  s.toCharArray(cString, s.length() + 1);
-}
-
-// WINNER EVALUATION
 String evaluateWinner() {
 
   if (playerSelection == computerSelection)
@@ -215,14 +218,13 @@ String evaluateWinner() {
   return "computer";
 }
 
-// REVIOUS MOVES TRACKING
+
 void updatePrevMoves(String move) {
 
-  char c = '0';
-  if (move == "rock") c = 'r';
-  if (move == "paper") c = 'p';
-  if (move == "scissors") c = 's';
+  char code = '0';
+  if (move == "rock")     code = 'r';
+  if (move == "paper")    code = 'p';
+  if (move == "scissors") code = 's';
 
-  // shift left, append new move
-  prevMoves = prevMoves.substring(1) + c;
+  prevMoves = prevMoves.substring(1) + code;
 }

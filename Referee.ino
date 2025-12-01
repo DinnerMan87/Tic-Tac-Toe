@@ -155,6 +155,7 @@ void loop() {
   // ============================================================
   else if (stage == "stage1") {
 
+    compSerial.listen();
     if (compSerial.available()) {
 
       String msg = compSerial.readStringUntil('\n');
@@ -237,7 +238,7 @@ else if (stage == "stage2") {
   //  STAGE 3 — SHOW WINNER FOR 2.5 SEC
   // ============================================================
   else if (stage == "stage3") {
-    if (millis() - stageTimer >= 2500) {
+    if (millis() - stageTimer >= 5000) {
 
       stage = "stage4";
       lcd.clear();
@@ -280,11 +281,14 @@ String evaluateWinner() {
   if (playerSelection == computerSelection)
     return "tie";
 
-  if (playerSelection == "rock"     && computerSelection == "scissors") return "win\n";
-  if (playerSelection == "paper"    && computerSelection == "rock")     return "win\n";
-  if (playerSelection == "scissors" && computerSelection == "paper")    return "win\n";
+  if (playerSelection == "rock"     && computerSelection == "scissors"){playerSerial.write("win\n"); return "win\n";}
+  if (playerSelection == "paper"    && computerSelection == "rock"){ playerSerial.write("win\n");     return "win\n";}
+  if (playerSelection == "scissors" && computerSelection == "paper"){ playerSerial.write("win\n");   return "win\n";}
+  if (playerSelection == computerSelection)
+  return "tie";
 
   playerSerial.print("lose\n");
+  
   return "Computer\n";
   
 }
